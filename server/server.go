@@ -14,7 +14,7 @@ type Server struct {
 
 	// 在线用户
 	OnlineUser map[string]*client.User
-	mapLock    sync.RWMutex
+	MapLock    sync.RWMutex
 
 	// 广播管道
 	Message chan string
@@ -39,11 +39,11 @@ func (this *Server) ListenMessage() {
 		msg := <-this.Message
 
 		// 发送消息给所有在线用户
-		this.mapLock.Lock()
+		this.MapLock.Lock()
 		for _, onlineUser := range this.OnlineUser {
 			onlineUser.MsgChan <- msg
 		}
-		this.mapLock.Unlock()
+		this.MapLock.Unlock()
 	}
 }
 
@@ -56,20 +56,16 @@ func (this *Server) BroadCast(user *client.User, msg string) {
 // Handler 当前连接的业务：登录用户，广播消息
 func (this *Server) Handler(conn net.Conn) {
 	// 用户上线，记录用户
-	this.mapLock.Lock()
-	user := client.NewUser(conn)
-	this.OnlineUser[user.Name] = user
-	this.mapLock.Unlock()
+	user := client.NewUser(conn, this)
+	user.Online()
 
-	// 广播用户上线消息
-	this.BroadCast(user, "已上线！")
 	// 接收用户传递的消息
 	go func() {
 		buf := make([]byte, MSG_SIZE)
 		for {
 			readLength, err := conn.Read(buf)
 			if readLength == 0 {
-				this.BroadCast(user, "下线")
+				user.Offline()
 				return
 			}
 			if err != nil && err != io.EOF {
@@ -78,7 +74,7 @@ func (this *Server) Handler(conn net.Conn) {
 			}
 			// 二进制消息转为字符串（去除\n）
 			msg := string(buf[:readLength-1])
-			this.BroadCast(user, msg)
+			user.DoMsg(msg)
 		}
 	}()
 	// 阻塞当前会话
