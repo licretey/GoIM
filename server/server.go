@@ -13,8 +13,8 @@ type Server struct {
 	Port int
 
 	// 在线用户
-	OnlineUser map[string]*client.User
-	MapLock    sync.RWMutex
+	OnlineUsers map[string]*client.User
+	MapLock     sync.RWMutex
 
 	// 广播管道
 	Message chan string
@@ -25,10 +25,10 @@ var MSG_SIZE = 4096
 // NewServer 创建一个server
 func NewServer(ip string, port int) *Server {
 	server := &Server{
-		Ip:         ip,
-		Port:       port,
-		OnlineUser: make(map[string]*client.User),
-		Message:    make(chan string),
+		Ip:          ip,
+		Port:        port,
+		OnlineUsers: make(map[string]*client.User),
+		Message:     make(chan string),
 	}
 	return server
 }
@@ -40,7 +40,7 @@ func (this *Server) ListenMessage() {
 
 		// 发送消息给所有在线用户
 		this.MapLock.Lock()
-		for _, onlineUser := range this.OnlineUser {
+		for _, onlineUser := range this.OnlineUsers {
 			onlineUser.MsgChan <- msg
 		}
 		this.MapLock.Unlock()
@@ -56,8 +56,8 @@ func (this *Server) BroadCast(user *client.User, msg string) {
 // Handler 当前连接的业务：登录用户，广播消息
 func (this *Server) Handler(conn net.Conn) {
 	// 用户上线，记录用户
-	user := client.NewUser(conn, this)
-	user.Online()
+	user := client.NewUser(conn)
+	user.Online(this)
 
 	// 接收用户传递的消息
 	go func() {
@@ -65,7 +65,7 @@ func (this *Server) Handler(conn net.Conn) {
 		for {
 			readLength, err := conn.Read(buf)
 			if readLength == 0 {
-				user.Offline()
+				user.Offline(this)
 				return
 			}
 			if err != nil && err != io.EOF {
@@ -74,7 +74,7 @@ func (this *Server) Handler(conn net.Conn) {
 			}
 			// 二进制消息转为字符串（去除\n）
 			msg := string(buf[:readLength-1])
-			user.DoMsg(msg)
+			user.DoMsg(msg, this)
 		}
 	}()
 	// 阻塞当前会话
