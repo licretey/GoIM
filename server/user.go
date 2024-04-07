@@ -1,7 +1,6 @@
-package client
+package server
 
 import (
-	"GoIM/server"
 	"net"
 )
 
@@ -37,7 +36,7 @@ func (this *User) ListenMsg() {
 }
 
 // Online 用户上线
-func (this *User) Online(server *server.Server) {
+func (this *User) Online(server *Server) {
 	// 用户上线，记录用户
 	server.MapLock.Lock()
 	server.OnlineUsers[this.Name] = this
@@ -48,7 +47,7 @@ func (this *User) Online(server *server.Server) {
 }
 
 // Offline 用户下线
-func (this *User) Offline(server *server.Server) {
+func (this *User) Offline(server *Server) {
 	// 用户上线，记录用户
 	server.MapLock.Lock()
 	delete(server.OnlineUsers, this.Name)
@@ -59,7 +58,7 @@ func (this *User) Offline(server *server.Server) {
 }
 
 // DoMsg 用户处理消息
-func (this *User) DoMsg(msg string, server *server.Server) {
+func (this *User) DoMsg(msg string, server *Server) {
 	if msg == "who" {
 		server.MapLock.Lock()
 		for _, tempUser := range server.OnlineUsers {

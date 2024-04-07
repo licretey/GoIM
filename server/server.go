@@ -1,7 +1,6 @@
 package server
 
 import (
-	"GoIM/client"
 	"fmt"
 	"io"
 	"net"
@@ -13,7 +12,7 @@ type Server struct {
 	Port int
 
 	// 在线用户
-	OnlineUsers map[string]*client.User
+	OnlineUsers map[string]*User
 	MapLock     sync.RWMutex
 
 	// 广播管道
@@ -27,7 +26,7 @@ func NewServer(ip string, port int) *Server {
 	server := &Server{
 		Ip:          ip,
 		Port:        port,
-		OnlineUsers: make(map[string]*client.User),
+		OnlineUsers: make(map[string]*User),
 		Message:     make(chan string),
 	}
 	return server
@@ -48,7 +47,7 @@ func (this *Server) ListenMessage() {
 }
 
 // BroadCast 广播消息推送
-func (this *Server) BroadCast(user *client.User, msg string) {
+func (this *Server) BroadCast(user *User, msg string) {
 	sendMsg := "[" + user.Addr + "]" + ":" + msg
 	this.Message <- sendMsg
 }
@@ -56,7 +55,7 @@ func (this *Server) BroadCast(user *client.User, msg string) {
 // Handler 当前连接的业务：登录用户，广播消息
 func (this *Server) Handler(conn net.Conn) {
 	// 用户上线，记录用户
-	user := client.NewUser(conn)
+	user := NewUser(conn)
 	user.Online(this)
 
 	// 接收用户传递的消息
