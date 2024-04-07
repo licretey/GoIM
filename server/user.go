@@ -2,6 +2,7 @@ package server
 
 import (
 	"net"
+	"strings"
 )
 
 type User struct {
@@ -68,6 +69,21 @@ func (this *User) DoMsg(msg string) {
 			this.SendMsg(onlineMsg)
 		}
 		this.server.MapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		newName := strings.Split(msg, "|")[1]
+		// 判断name是否重复
+		_, ok := this.server.OnlineUsers[newName]
+		if ok {
+			this.SendMsg("用户名" + newName + "已被使用")
+		} else {
+			this.server.MapLock.Lock()
+			delete(this.server.OnlineUsers, this.Name)
+			this.server.OnlineUsers[newName] = this
+			this.server.MapLock.Unlock()
+
+			this.Name = newName
+			this.SendMsg("您已更新用户名:" + this.Name + "\n")
+		}
 	}
 	this.server.BroadCast(this, msg)
 }

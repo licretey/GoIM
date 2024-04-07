@@ -55,8 +55,8 @@ func (this *Server) BroadCast(user *User, msg string) {
 // Handler 当前连接的业务：登录用户，广播消息
 func (this *Server) Handler(conn net.Conn) {
 	// 用户上线，记录用户
-	user := NewUser(conn)
-	user.Online(this)
+	user := NewUser(conn, this)
+	user.Online()
 
 	// 接收用户传递的消息
 	go func() {
@@ -64,7 +64,7 @@ func (this *Server) Handler(conn net.Conn) {
 		for {
 			readLength, err := conn.Read(buf)
 			if readLength == 0 {
-				user.Offline(this)
+				user.Offline()
 				return
 			}
 			if err != nil && err != io.EOF {
@@ -73,7 +73,7 @@ func (this *Server) Handler(conn net.Conn) {
 			}
 			// 二进制消息转为字符串（去除\n）
 			msg := string(buf[:readLength-1])
-			user.DoMsg(msg, this)
+			user.DoMsg(msg)
 		}
 	}()
 	// 阻塞当前会话
