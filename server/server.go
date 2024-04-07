@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -74,10 +75,29 @@ func (this *Server) Handler(conn net.Conn) {
 			// 二进制消息转为字符串（去除\n）
 			msg := string(buf[:readLength-1])
 			user.DoMsg(msg)
+
+			// 设置用户活跃
+			user.IsAlive <- true
 		}
 	}()
-	// 阻塞当前会话
-	select {}
+
+	// 阻塞当前用户的会话
+	for {
+		select {
+		case <-user.IsAlive:
+			// 用户是活跃的，不用做任何事情（会执行下方case重置定时器）
+		// 15s后定时器触发
+		case <-time.After(time.Second * 10):
+
+			user.SendMsg("您已被踢出系统")
+			// 关闭用户缓冲区
+			close(user.MsgChan)
+			// 用户连接关闭
+			conn.Close()
+			// 推出handler
+			return
+		}
+	}
 }
 
 // Start 启动server

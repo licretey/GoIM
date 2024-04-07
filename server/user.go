@@ -13,6 +13,9 @@ type User struct {
 	// 消息缓冲区
 	MsgChan chan string
 	server  *Server
+
+	// 是否活跃
+	IsAlive chan bool
 }
 
 func NewUser(conn net.Conn, server *Server) *User {
@@ -24,7 +27,10 @@ func NewUser(conn net.Conn, server *Server) *User {
 		conn:    conn,
 		MsgChan: make(chan string),
 		server:  server,
+		IsAlive: make(chan bool),
 	}
+	// 激活用户
+	//user.IsAlive <- true
 	// 启动对消息通道的监听
 	go user.ListenMsg()
 	return user
