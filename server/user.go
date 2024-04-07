@@ -11,9 +11,10 @@ type User struct {
 	conn net.Conn
 	// 消息缓冲区
 	MsgChan chan string
+	server  *Server
 }
 
-func NewUser(conn net.Conn) *User {
+func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
 
 	user := &User{
@@ -21,6 +22,7 @@ func NewUser(conn net.Conn) *User {
 		Addr:    userAddr,
 		conn:    conn,
 		MsgChan: make(chan string),
+		server:  server,
 	}
 	// 启动对消息通道的监听
 	go user.ListenMsg()
@@ -36,38 +38,38 @@ func (this *User) ListenMsg() {
 }
 
 // Online 用户上线
-func (this *User) Online(server *Server) {
+func (this *User) Online() {
 	// 用户上线，记录用户
-	server.MapLock.Lock()
-	server.OnlineUsers[this.Name] = this
-	server.MapLock.Unlock()
+	this.server.MapLock.Lock()
+	this.server.OnlineUsers[this.Name] = this
+	this.server.MapLock.Unlock()
 
 	// 广播用户上线消息
-	server.BroadCast(this, "已上线！")
+	this.server.BroadCast(this, "已上线！")
 }
 
 // Offline 用户下线
-func (this *User) Offline(server *Server) {
+func (this *User) Offline() {
 	// 用户上线，记录用户
-	server.MapLock.Lock()
-	delete(server.OnlineUsers, this.Name)
-	server.MapLock.Unlock()
+	this.server.MapLock.Lock()
+	delete(this.server.OnlineUsers, this.Name)
+	this.server.MapLock.Unlock()
 
 	// 广播用户上线消息
-	server.BroadCast(this, "已下线线！")
+	this.server.BroadCast(this, "已下线线！")
 }
 
 // DoMsg 用户处理消息
-func (this *User) DoMsg(msg string, server *Server) {
+func (this *User) DoMsg(msg string) {
 	if msg == "who" {
-		server.MapLock.Lock()
-		for _, tempUser := range server.OnlineUsers {
+		this.server.MapLock.Lock()
+		for _, tempUser := range this.server.OnlineUsers {
 			onlineMsg := "[" + tempUser.Addr + "]" + tempUser.Name + "在线"
 			this.SendMsg(onlineMsg)
 		}
-		server.MapLock.Unlock()
+		this.server.MapLock.Unlock()
 	}
-	server.BroadCast(this, msg)
+	this.server.BroadCast(this, msg)
 }
 
 func (this *User) SendMsg(msg string) {
